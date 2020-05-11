@@ -9,11 +9,14 @@ import (
 	"os/signal"
 
 	"github.com/nexlight101/gRPC_course/blog/blogpb"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 )
 
 // Define  your globle server struct
@@ -28,6 +31,71 @@ type blogItem struct {
 	AuthorID string             `bson:"author_id"`
 	Content  string             `bson:"content"`
 	Title    string             `bson:"title"`
+}
+
+// ReadBlog reads a specific blog from blogID
+func (*server) ReadBlog(ctx context.Context, req *blogpb.ReadBlogRequest) (*blogpb.ReadBlogResponse, error) {
+	fmt.Println("Read blog request received")
+	// Convert the request object id to primitive object id
+	blogID, pErr := primitive.ObjectIDFromHex(req.GetBlogId())
+	if pErr != nil {
+		return nil, status.Errorf(codes.NotFound, fmt.Sprintf("Could not convert object id: %v\n", pErr))
+	}
+
+	// Find the blog in mongo
+	filter := bson.M{"_id": blogID}
+	blog := collection.FindOne(context.Background(), filter)
+	if blog.Err() != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Could not find object id: %v\n", blog.Err()))
+	}
+	// Decode the blog
+	foundBlog := blogItem{}
+	dErr := blog.Decode(&foundBlog)
+	if dErr != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Could decode blog: %v\n", dErr))
+	}
+	return &blogpb.ReadBlogResponse{
+		Blog: &blogpb.Blog{
+			Id:       req.GetBlogId(),
+			AuthorId: foundBlog.AuthorID,
+			Content:  foundBlog.Content,
+			Title:    foundBlog.Title,
+		},
+	}, nil
+}
+
+//Creates a blog item and save it in mongo db
+func (*server) CreateBlog(ctx context.Context, req *blogpb.CreateBlogRequest) (*blogpb.CreateBlogResponse, error) {
+	fmt.Println("Blog request received")
+	blog := req.GetBlog()
+	// Make a blog
+	data := blogItem{
+		AuthorID: blog.GetAuthorId(),
+		Content:  blog.GetContent(),
+		Title:    blog.GetTitle(),
+	}
+	// Store the blog
+	res, mErr := collection.InsertOne(context.Background(), data)
+	// Handle mongo Errors
+	if mErr != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Internal mongoDB Error, %v\n", mErr))
+	}
+
+	// return the response (blog)
+	oid, ok := res.InsertedID.(primitive.ObjectID)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Cannot convert to oid, %v\n", mErr))
+	}
+	response := blogpb.CreateBlogResponse{
+		Blog: &blogpb.Blog{
+			Id:       oid.Hex(),
+			AuthorId: data.AuthorID,
+			Content:  data.Content,
+			Title:    data.Title,
+		},
+	}
+
+	return &response, nil
 }
 
 func main() {
