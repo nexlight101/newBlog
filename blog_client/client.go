@@ -11,6 +11,40 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+func doDeleteBlog(c blogpb.BlogServiceClient) {
+	fmt.Println("Deleting a Blog")
+	// populate a requets
+	req := &blogpb.DeleteBlogRequest{
+		BlogId: "5e97033cfd1bae8eadfccf24",
+	}
+	// Sends a request
+	res, dErr := c.DeleteBlog(context.Background(), req)
+	if dErr != nil {
+		log.Fatalf("Failed to delete blog: %v\n", dErr)
+	}
+	// receives a response
+	fmt.Printf("Blog: %v deleted\n", res.GetBlogId())
+}
+
+//doUpdateBlog sends a request for a updated blog
+func doUpdateBlog(c blogpb.BlogServiceClient) {
+	fmt.Println("Updating a Blog")
+	req := &blogpb.UpdateBlogRequest{
+		Blog: &blogpb.Blog{
+			Id:       "5eb9309c7ade23cccb8c797f",
+			AuthorId: "Ronald",
+			Content:  "This is to test my updated blog",
+			Title:    "I Updated My Blog",
+		},
+	}
+	res, rErr := c.UpdateBlog(context.Background(), req)
+	if rErr != nil {
+		log.Fatalf("A server error has accured: %v\n", rErr)
+		return
+	}
+	fmt.Printf("blog %v updated\n", res.GetBlog())
+}
+
 func doReadBlog(c blogpb.BlogServiceClient) {
 	fmt.Println("Reading a Blog")
 	req := &blogpb.ReadBlogRequest{
@@ -58,8 +92,13 @@ func main() {
 	fmt.Printf("Client activated: %v\n", c)
 
 	// send request to unary client
-	doUnary(c)
+	// doUnary(c)
 
-	doReadBlog(c)
+	// doReadBlog(c)
+
+	// doUpdateBlog(c)
+
+	// doDeleteBlog() Deletes a blog
+	doDeleteBlog(c)
 
 }

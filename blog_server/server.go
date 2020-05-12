@@ -33,6 +33,72 @@ type blogItem struct {
 	Title    string             `bson:"title"`
 }
 
+// DeleteBlog Deletes a blog
+func (*server) DeleteBlog(ctx context.Context, req *blogpb.DeleteBlogRequest) (*blogpb.DeleteBlogResponse, error) {
+	fmt.Println("Deleting blog")
+	// receive a requset
+	blogID := req.GetBlogId()
+	// convert ID to primitive object id
+	bID, pErr := primitive.ObjectIDFromHex(blogID)
+	if pErr != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Cannot convert object ID: %v\n", pErr))
+	}
+	// Delete the blog in mongoDB
+	filter := bson.M{
+		"_id": bID,
+	}
+	result, dErr := collection.DeleteOne(context.Background(), filter)
+	if dErr != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Delete opperation failed %v\n", dErr))
+	}
+	if result.DeletedCount == 0 {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Blog was not deleted: %v\n", blogID))
+	}
+	// send back a response
+	return &blogpb.DeleteBlogResponse{
+		BlogId: blogID,
+	}, nil
+
+}
+
+// UpdateBlog updates a blog
+func (*server) UpdateBlog(ctx context.Context, req *blogpb.UpdateBlogRequest) (*blogpb.UpdateBlogResponse, error) {
+	fmt.Println("UpdateBlog request received")
+	// receive a request
+	blog := req.GetBlog()
+	// find and update a blog
+	blogID := blog.GetId()
+	bID, cErr := primitive.ObjectIDFromHex(blogID)
+	if cErr != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Cannot convert id %v\n", cErr))
+	}
+	filter := bson.M{"_id": bID}
+	update := bson.M{"$set": blogItem{
+		AuthorID: blog.AuthorId,
+		Content:  blog.Content,
+		Title:    blog.Title,
+	},
+	}
+	fmt.Println("Updating record in mongoDB")
+	result, uErr := collection.UpdateOne(context.Background(), filter, update)
+	if uErr != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Cannot write record %v\n", uErr))
+	}
+	if result.MatchedCount == 0 {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Cannot find record: %v\n", blogID))
+	}
+	// responds with an updated blog
+	res := &blogpb.UpdateBlogResponse{
+		Blog: &blogpb.Blog{
+			Id:       blogID,
+			AuthorId: blog.GetAuthorId(),
+			Content:  blog.GetContent(),
+			Title:    blog.GetTitle(),
+		},
+	}
+	return res, nil
+}
+
 // ReadBlog reads a specific blog from blogID
 func (*server) ReadBlog(ctx context.Context, req *blogpb.ReadBlogRequest) (*blogpb.ReadBlogResponse, error) {
 	fmt.Println("Read blog request received")
