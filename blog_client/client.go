@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 
 	"github.com/nexlight101/gRPC_course/blog/blogpb"
@@ -10,6 +11,24 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+func doListBlog(c blogpb.BlogServiceClient) {
+	stream, sErr := c.ListBlog(context.Background(), &blogpb.ListBlogRequest{})
+	if sErr != nil {
+		log.Fatalf("gRPC listblog error: %v\n", sErr)
+	}
+	for {
+		res, err := stream.Recv()
+		if err == io.EOF {
+			return
+		}
+		if err != nil {
+			log.Fatalf("Cannot receive from server: %v\n", err)
+		}
+		fmt.Println(res.GetBlog())
+	}
+
+}
 
 func doDeleteBlog(c blogpb.BlogServiceClient) {
 	fmt.Println("Deleting a Blog")
@@ -99,6 +118,9 @@ func main() {
 	// doUpdateBlog(c)
 
 	// doDeleteBlog() Deletes a blog
-	doDeleteBlog(c)
+	// doDeleteBlog(c)
+
+	// doListBlog list all blogs
+	doListBlog(c)
 
 }

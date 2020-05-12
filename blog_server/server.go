@@ -33,6 +33,41 @@ type blogItem struct {
 	Title    string             `bson:"title"`
 }
 
+// ListBlog lists all blogs
+func (*server) ListBlog(req *blogpb.ListBlogRequest, stream blogpb.BlogService_ListBlogServer) error {
+	fmt.Println("listing blogs")
+	filter := bson.D{{}}
+	cursor, cErr := collection.Find(context.Background(), filter)
+	if cErr != nil {
+		return status.Errorf(codes.NotFound, fmt.Sprintf("Cannot find record in mongoDB: %v\n", cErr))
+	}
+	blog := blogItem{}
+	for cursor.Next(context.Background()) { //while there is still blogs
+		dErr := cursor.Decode(&blog)
+		fmt.Printf("blog: %v\n", blog)
+		if dErr != nil {
+			return status.Errorf(codes.Internal, fmt.Sprintf("Cannot decode blog from mongoDB: %v\n", cErr))
+		}
+		sErr := stream.Send(&blogpb.ListBlogResponse{
+			Blog: newBlog(blog),
+		},
+		)
+		if sErr != nil {
+			return status.Errorf(codes.Internal, fmt.Sprintf("gRPC error: %v\n", sErr))
+		}
+	}
+	return nil
+
+}
+func newBlog(b blogItem) *blogpb.Blog {
+	return &blogpb.Blog{
+		Id:       b.ID.Hex(),
+		AuthorId: b.AuthorID,
+		Content:  b.Content,
+		Title:    b.Title,
+	}
+}
+
 // DeleteBlog Deletes a blog
 func (*server) DeleteBlog(ctx context.Context, req *blogpb.DeleteBlogRequest) (*blogpb.DeleteBlogResponse, error) {
 	fmt.Println("Deleting blog")
