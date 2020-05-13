@@ -64,6 +64,8 @@ func (*server) ListBlog(req *blogpb.ListBlogRequest, stream blogpb.BlogService_L
 	return nil
 
 }
+
+//
 func newBlog(b blogItem) *blogpb.Blog {
 	return &blogpb.Blog{
 		Id:       b.ID.Hex(),
