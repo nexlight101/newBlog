@@ -59,7 +59,7 @@ func (*server) ListBlog(req *blogpb.ListBlogRequest, stream blogpb.BlogService_L
 		}
 	}
 	if err := cursor.Err(); err != nil {
-		return status.Errorf(codes.Internal, fmt.Sprintf("gRPC error: %v\n", err))
+		return status.Errorf(codes.Internal, fmt.Sprintf("Cursor error: %v\n", err))
 	}
 	return nil
 
