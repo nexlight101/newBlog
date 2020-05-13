@@ -49,7 +49,7 @@ message DeleteBlogResponse {
 
 // ListBlog messages
 message ListBlogRequest {
-    
+    string author_id=1;
 }
 
 message ListBlogResponse {

@@ -36,7 +36,8 @@ type blogItem struct {
 // ListBlog lists all blogs
 func (*server) ListBlog(req *blogpb.ListBlogRequest, stream blogpb.BlogService_ListBlogServer) error {
 	fmt.Println("listing blogs")
-	filter := bson.D{{}}
+	authorID := req.GetAuthorId()
+	filter := bson.M{"author_id": authorID}
 	cursor, cErr := collection.Find(context.Background(), filter)
 	if cErr != nil {
 		return status.Errorf(codes.NotFound, fmt.Sprintf("Cannot find record in mongoDB: %v\n", cErr))

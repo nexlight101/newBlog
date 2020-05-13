@@ -12,8 +12,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// List all blogs with authorID
 func doListBlog(c blogpb.BlogServiceClient) {
-	stream, sErr := c.ListBlog(context.Background(), &blogpb.ListBlogRequest{})
+	req := &blogpb.ListBlogRequest{
+		AuthorId: "Hendrik",
+	}
+	stream, sErr := c.ListBlog(context.Background(), req)
 	if sErr != nil {
 		log.Fatalf("gRPC listblog error: %v\n", sErr)
 	}
