@@ -42,6 +42,7 @@ func (*server) ListBlog(req *blogpb.ListBlogRequest, stream blogpb.BlogService_L
 	if cErr != nil {
 		return status.Errorf(codes.NotFound, fmt.Sprintf("Cannot find record in mongoDB: %v\n", cErr))
 	}
+	defer cursor.Close(context.Background())
 	blog := blogItem{}
 	for cursor.Next(context.Background()) { //while there is still blogs
 		dErr := cursor.Decode(&blog)
@@ -56,6 +57,9 @@ func (*server) ListBlog(req *blogpb.ListBlogRequest, stream blogpb.BlogService_L
 		if sErr != nil {
 			return status.Errorf(codes.Internal, fmt.Sprintf("gRPC error: %v\n", sErr))
 		}
+	}
+	if err := cursor.Err(); err != nil {
+		return status.Errorf(codes.Internal, fmt.Sprintf("gRPC error: %v\n", err))
 	}
 	return nil
 
